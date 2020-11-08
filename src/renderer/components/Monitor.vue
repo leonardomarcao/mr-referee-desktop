@@ -65,7 +65,7 @@
               <h2>Acompanhamento de Parlamentares</h2>
               <hr/>
               <b-card v-for="parliamentary in parliamentarians">
-                <b-row align-v="center">
+                <b-row align-v="center" v-bind:index="parliamentary.id">
                   <b-col md="3">
                     <b-card-img :src="parliamentary.avatar_url" class="avatar img-rounded img-responsive"></b-card-img>
                   </b-col>
@@ -87,6 +87,9 @@
                     <router-link :to="{name: 'monitor-parliamentary', params: { id: parliamentary.id }}">
                       <b-button variant="primary">Acompanhar</b-button>
                     </router-link>
+                    <b-button variant="danger" @click="deleteParliamentary(parliamentary.id)">
+                      <i class="fa fa-trash fa-lg"></i>
+                    </b-button>
                   </b-col>
                 </b-row>
               </b-card>
@@ -110,6 +113,7 @@ import axios from 'axios'
 import Lottie from 'vue-lottie/src/lottie'
 import * as animationData from '../assets/lottie/37725-loading-50-among-us.json'
 import { Timeline, TimelineItem, TimelineTitle } from 'vue-cute-timeline'
+const {getCurrentWindow} = require('electron').remote
 
 export default {
   components: {
@@ -148,12 +152,16 @@ export default {
         estate: e.estate,
         avatar_url: e.avatar_url
       }))))
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 300))
       this.loading = false
     },
     async updateParliamentary (id, isSuspicious) {
       await axios.put(`http://localhost:3333/update_parlamentar/${id}`,
         {has_suspicions: isSuspicious}, {headers: {'Content-Type': 'application/json'}})
+    },
+    async deleteParliamentary (id) {
+      await axios.delete(`http://localhost:3333/remove_parlamentar/${id}`)
+      getCurrentWindow().reload()
     }
   },
   created () {

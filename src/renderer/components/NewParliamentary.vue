@@ -77,12 +77,15 @@
                         v-model="form.party"
                         type="select"
                         required
+                        :state="partyState"
                         placeholder="Por favor, selecione o partido do parlamentar"
+                        aria-describedby="input-1-live-feedback"
                     >
                       <option disabled selected>Escolha o partido do parlamentar
                       </option>
                       <option v-for="party in parties" :value="party.value" v-text="party.text"></option>
                     </b-form-select>
+                    <b-form-invalid-feedback id="input-1-live-feedback">Por favor, preencha o partido!</b-form-invalid-feedback>
                   </b-form-group>
 
                   <b-form-group
@@ -96,33 +99,39 @@
                         v-model="form.estate"
                         type="select"
                         required
+                        :state="estateState"
                         placeholder="Por favor, escolha o estado do parlamentar"
                         @change="onChange($event)"
+                        aria-describedby="input-2-live-feedback"
                     >
                       <option disabled selected>Escolha o estado do parlamentar
                       </option>
                       <option v-for="estate in estates" :value="estate.text" v-text="estate.text"></option>
                     </b-form-select>
+                    <b-form-invalid-feedback id="input-2-live-feedback">Por favor, preencha o estado!</b-form-invalid-feedback>
                   </b-form-group>
 
                   <b-form-group
                       id="input-group-3"
-                      label="Nome Parlamentar"
+                      label="Parlamentar"
                       label-for="input-3"
-                      description="Nome do Parlamentar"
+                      description="Parlamentar"
                   >
                     <b-form-select
                         id="input-3"
                         v-model="form.parliamentary"
                         type="select"
                         required
-                        placeholder="Por favor, escolha o nome do parlamentar"
+                        :state="parliamentaryState"
+                        placeholder="Por favor, escolha o parlamentar"
+                        aria-describedby="input-3-live-feedback"
                     >
-                      <option disabled selected>Escolha o nome do parlamentar
+                      <option disabled selected>Escolha o parlamentar
                       </option>
                       <option v-for="parliamentary in parliamentarians" :value="parliamentary.value"
                               v-text="parliamentary.text"></option>
                     </b-form-select>
+                    <b-form-invalid-feedback id="input-3-live-feedback">Por favor, preencha o parlamentar!</b-form-invalid-feedback>
                   </b-form-group>
 
                   <b-form-checkbox
@@ -149,8 +158,10 @@
   </div>
 </template>
 
+
 <script>
 import axios from 'axios'
+import Vue from 'vue'
 
 export default {
   data () {
@@ -169,15 +180,11 @@ export default {
     }
   },
   methods: {
-    // eslint-disable-next-line camelcase
     onChange (evt) {
       this.pullNames(this.form.party, this.form.estate)
-      this.handleNames(this.form.estate)
     },
     onSubmit (evt) {
-      // evt.preventDefault()
-      // alert(JSON.stringify(this.form))
-      this.pullAndAddParliamentary(this.form.parliamentary, this.form.checked)
+      this.pullAndAddParliamentary(this.form.parliamentary, this.form.checked, evt)
     },
     onReset (evt) {
       evt.preventDefault()
@@ -227,7 +234,7 @@ export default {
           text: e.nome, value: e.id, uf: e.siglaUf
         })).filter(x => x.uf === uf))))
     },
-    async pullAndAddParliamentary (parliamentaryId, isSuspincious) {
+    async pullAndAddParliamentary (parliamentaryId, isSuspincious, evt) {
       // get all data from parliamentary
       let jsonObject = JSON.stringify(await axios.get(`https://dadosabertos.camara.leg.br/api/v2/deputados/${parliamentaryId}`, {
         headers: {
@@ -241,17 +248,32 @@ export default {
         estate: e.data.dados.ultimoStatus.siglaUf,
         has_suspicions: isSuspincious
       })))
-      console.log(jsonObject)
       // post on mr-refeee-desktop
       await axios.post('http://localhost:3333/add_parlamentar', jsonObject, {headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
-      }})
+      }}).then(function (response) {
+        Vue.$toast.success('Parlamentar cadastrado com sucesso!')
+      }).catch(function (error) {
+        Vue.$toast.error(error.response.data.error === 'Parlamentar already exists.' ? 'Parlamentar já existe' : error)
+        return Promise.reject(error)
+      })
     }
   },
   created () {
     this.pullParties()
     this.pullEstates()
+  },
+  computed: {
+    partyState () {
+      return !!this.form.party
+    },
+    estateState () {
+      return !!this.form.estate
+    },
+    parliamentaryState () {
+      return !!this.form.parliamentary
+    }
   }
 }
 </script>
